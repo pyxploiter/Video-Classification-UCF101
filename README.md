@@ -22,6 +22,14 @@ UCF101 Action Recognition dataset is used.
 
 [Click here to download the labels](https://www.crcv.ucf.edu/data/UCF101/UCF101TrainTestSplits-RecognitionTask.zip)
 
+### Pretrained Model
+
+[Click here to download the pretrained model](https://drive.google.com/file/d/10mEgt-jXg51eF39di2zgGSvQp2CKSCYS/view?usp=sharing)
+
+Model is trained on following 15 classes from UCF101: 
+['ApplyEyeMakeup', 'BabyCrawling', 'CleanAndJerk', 'Diving', 'Fencing', 'GolfSwing', 'Haircut', 'IceDancing', 'JavelinThrow', 'Kayaking', 'LongJump', 'MilitaryParade', 'Nunchucks', 'ParallelBars', 'Rafting']
+
+
 ### Training
 
 ```
