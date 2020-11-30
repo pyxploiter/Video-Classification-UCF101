@@ -1,4 +1,4 @@
-# Video classification using Resnet (2+1)D on UCF101 Dataset
+## Video classification using Resnet (2+1)D on UCF101 Dataset
 
 ### Installations
 
@@ -17,7 +17,9 @@ or you can install above packages using pip:
 ### Data
 
 UCF101 Action Recognition dataset is used.
+
 [Click here to download the dataset](https://www.crcv.ucf.edu/data/UCF101/UCF101.rar)
+
 [Click here to download the labels](https://www.crcv.ucf.edu/data/UCF101/UCF101TrainTestSplits-RecognitionTask.zip)
 
 ### Training
