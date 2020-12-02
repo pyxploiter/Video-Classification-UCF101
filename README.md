@@ -29,8 +29,28 @@ UCF101 Action Recognition dataset is used.
 Model is trained on following 15 classes from UCF101: 
 ['ApplyEyeMakeup', 'BabyCrawling', 'CleanAndJerk', 'Diving', 'Fencing', 'GolfSwing', 'Haircut', 'IceDancing', 'JavelinThrow', 'Kayaking', 'LongJump', 'MilitaryParade', 'Nunchucks', 'ParallelBars', 'Rafting']
 
+### Prepare Data for Training
+This script reads the names of classes from "*<LABEL_DIR>*/classInd.txt" file and copies the videos from *<DATA_DIR>* to corresponding class folders in the new directory named *filtered_data*. 
+```
+usage: prepare_data.py [-h] -d DATA_DIR -l LABEL_DIR
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -d DATA_DIR, --data_dir DATA_DIR
+                        Path to data videos directory
+  -l LABEL_DIR, --label_dir LABEL_DIR
+                        path to action recognition labels directory
+```
+
+Sample command:
+```
+python prepare_data.py \
+	--data_dir UCF-101
+	--label_dir ucfTrainTestlist
+```
 
 ### Training
+This script trains the model on the data in *<DATA_DIR>* using the train test splits provided in *<LABEL_DIR>* 
 
 ```
 usage: train.py [-h] [-d DATA_DIR] [-l LABEL_DIR] [-o OUTPUT_DIR]
@@ -58,7 +78,7 @@ optional arguments:
 Sample command:
 ```
 python train.py \
-	--data data \
+	--data filtered_data \
 	--labels ucfTrainTestlist \
 	--output saved_model \
 	--num_epochs 1 \
@@ -68,9 +88,10 @@ python train.py \
 ```
 
 ### Testing
+This script tests the model on the data in *<DATA_DIR>* using the test splits provided in *<LABEL_DIR>*
 
 ```
-usage: infer.py [-h] [-d DATA_DIR] [-l LABEL_DIR] [-i SAVED_MODEL]
+usage: test.py [-h] [-d DATA_DIR] [-l LABEL_DIR] [-i SAVED_MODEL]
                 [-bs BATCH_SIZE] [-fc FRAMES_PER_CLIP]
                 [-sc STEP_BETWEEN_CLIPS]
 
@@ -80,7 +101,7 @@ optional arguments:
                         path to training data videos
   -l LABEL_DIR, --labels LABEL_DIR
                         path to action recognition labels
-  -i SAVED_MODEL, --saved_model SAVED_MODEL
+  -m SAVED_MODEL, --saved_model SAVED_MODEL
                         path to saved model.
   -bs BATCH_SIZE, --batch_size BATCH_SIZE
                         Batch size of data
@@ -92,11 +113,41 @@ optional arguments:
 
 Sample command:
 ```
-python infer.py \
+python test.py \
 	--data data \
 	--labels ucfTrainTestlist \
 	--saved_model saved_model/best_model.pth \
 	--batch_size 16 \
 	--frames_per_clip 5 \
 	--step_between_clips 1
+```
+
+### Infer
+This script loads the trained video classification model from *<SAVED_MODEL>* path and shows the prediction on the video file from *<VIDEO_FILE>* path.
+
+```
+usage: infer.py [-h] [-v VIDEO_FILE] [-m SAVED_MODEL] [-l LABEL_DIR]
+                [-fc FRAMES_PER_CLIP] [-sc STEP_BETWEEN_CLIPS]
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -v VIDEO_FILE, --video_file VIDEO_FILE
+                        path to video file
+  -m SAVED_MODEL, --saved_model SAVED_MODEL
+                        path to saved model.
+  -l LABEL_DIR, --label_dir LABEL_DIR
+                        path to action recognition labels directory
+  -fc FRAMES_PER_CLIP, --frames_per_clip FRAMES_PER_CLIP
+                        framers per video clip
+  -sc STEP_BETWEEN_CLIPS, --step_between_clips STEP_BETWEEN_CLIPS
+                        steps between video clips
+
+```
+
+Sample command:
+```
+python infer.py \
+	--video_file test.avi
+	--saved_model saved_model/best_model.pth
+	--label_dir ucfTrainTestlist
 ```
