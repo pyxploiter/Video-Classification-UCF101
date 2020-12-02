@@ -1,5 +1,5 @@
-python infer.py \
-	--data data \
+python test.py \
+	--data filtered_data \
 	--labels ucfTrainTestlist \
 	--saved_model saved_model/best_model.pth \
 	--batch_size 16 \

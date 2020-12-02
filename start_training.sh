@@ -1,5 +1,5 @@
 python train.py \
-	--data data \
+	--data filtered_data \
 	--labels ucfTrainTestlist \
 	--output saved_model \
 	--num_epochs 1 \

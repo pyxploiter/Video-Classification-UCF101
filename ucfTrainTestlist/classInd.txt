@@ -1,0 +1,15 @@
+1 ApplyEyeMakeup
+2 BabyCrawling
+3 CleanAndJerk
+4 Diving
+5 Fencing
+6 GolfSwing
+7 Haircut
+8 IceDancing
+9 JavelinThrow
+10 Kayaking
+11 LongJump
+12 MilitaryParade
+13 Nunchucks
+14 ParallelBars
+15 Rafting

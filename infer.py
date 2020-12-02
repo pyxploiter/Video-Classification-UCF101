@@ -2,88 +2,77 @@ import os
 import argparse
 
 import torch
-from torch.nn import NLLLoss
-from torch import optim
+from torchvision import transforms
+from torchvision.datasets.video_utils import VideoClips
 
-from dataloader import load_data
+def get_transforms():
+    tfs = transforms.Compose([
+        # scale in [0, 1] of type float
+        transforms.Lambda(lambda x: x / 255.),
+        # reshape into (T, C, H, W) for easier convolutions
+        transforms.Lambda(lambda x: x.permute(3, 0, 1, 2)),
+        # rescale to the most common size
+        transforms.Lambda(lambda x: torch.nn.functional.interpolate(x, (240, 320))),
+    ])
 
-parser = argparse.ArgumentParser()
+    return tfs
 
-parser.add_argument("-d", "--data", dest="data_dir", help="path to training data videos")
-parser.add_argument("-l","--labels", dest="label_dir", help="path to action recognition labels")
-parser.add_argument("-i","--saved_model", dest="saved_model", help="path to saved model.")
-parser.add_argument("-bs","--batch_size", type=int, dest="batch_size", help="Batch size of data", default=8)
-parser.add_argument("-fc","--frames_per_clip", type=int, dest="frames_per_clip", help="framers per video clip", default=5)
-parser.add_argument("-sc","--step_between_clips", type=int, dest="step_between_clips", help="steps between video clips", default=1)
+def get_classes(label_dir):
+    with open(os.path.join(label_dir, "classInd.txt"), "r") as f:
+        classes = [x.split(" ")[1].replace("\n","") for x in f.readlines()]
+    return classes
 
-configs = parser.parse_args()
+if __name__ == '__main__':
 
-ucf_data_dir = configs.data_dir
-ucf_label_dir = configs.label_dir
-MODEL_PATH = configs.saved_model
+    parser = argparse.ArgumentParser()
 
-frames_per_clip = configs.frames_per_clip
-step_between_clips = configs.step_between_clips
-batch_size = configs.batch_size
+    parser.add_argument("-v", "--video_file", dest="video_file", help="path to video file")
+    parser.add_argument("-m","--saved_model", dest="saved_model", help="path to saved model.")
+    parser.add_argument("-l","--label_dir", dest="label_dir", help="path to action recognition labels directory")
+    parser.add_argument("-fc","--frames_per_clip", type=int, dest="frames_per_clip", help="framers per video clip", default=5)
+    parser.add_argument("-sc","--step_between_clips", type=int, dest="step_between_clips", help="steps between video clips", default=2)
 
-# check if cuda available
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    configs = parser.parse_args()
 
-# load the data into train test splits
-test_loader = load_data(data_dir=ucf_data_dir,
-                        label_dir=ucf_label_dir,
-                        batch_size=batch_size,
-                        frames_per_clip=frames_per_clip,
-                        step_between_clips=step_between_clips,
-                        test_only=True
+    video_file = configs.video_file
+    MODEL_PATH = configs.saved_model
+    LABEL_DIR = configs.label_dir
+
+    frames_per_clip = configs.frames_per_clip
+    step_between_clips = configs.step_between_clips
+
+    classes = get_classes(LABEL_DIR)
+
+    # check if cuda available
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    video_clips = VideoClips(
+                        [video_file],
+                        frames_per_clip,
+                        step_between_clips,
                     )
 
-# load model
-model = torch.load(MODEL_PATH, map_location=device)
-model.to(device)
+    total_clips = video_clips.num_clips()
 
-# define loss function
-criterion = NLLLoss()
+    # load model
+    model = torch.load(MODEL_PATH, map_location=device)
+    model.to(device)
 
-steps = 0
-max_acc = -100
-test_acc, test_losses = [], []
+    model.eval()
+    with torch.no_grad():
+        preds, outputs = [],[]
+        # load clips from videos and classify them
+        for clip_no in range(max(total_clips//4,1)):
+            video, audio, info, idx = video_clips.get_clip(clip_no)
+            video = get_transforms()(video)
+            inputs = video.unsqueeze(0).to(device)
+            logps = model.forward(inputs)
+            ps = torch.exp(logps)
+            top_p, top_class = ps.topk(1, dim=1)
+            outputs.append([classes[top_class],top_p.item()])
+            preds.append(classes[top_class])
 
-running_test_accuracy = 0
-running_test_loss = 0
-
-model.eval()
-with torch.no_grad():
-    print("testing...")
-    for tb_no, (inputs, labels) in enumerate(test_loader):
-        inputs = inputs.permute(0, 2, 1, 3, 4)
-        inputs, labels = inputs.to(device), labels.to(device)
-        logps = model.forward(inputs)
-        batch_loss = criterion(logps, labels)
-        t_loss = batch_loss.item()
-        running_test_loss += t_loss
-
-        ps = torch.exp(logps)
-        top_p, top_class = ps.topk(1, dim=1)
-        equals = top_class == labels.view(*top_class.shape)
-        t_acc = torch.mean(equals.type(torch.FloatTensor)).item()
-        running_test_accuracy += t_acc
-
-        print("[Testing] "
-                +str(tb_no+1)
-                +"/"
-                +str(len(test_loader))
-                +" - Test loss: "
-                +str(round(t_loss,4))
-                +" - Test accuracy:"
-                +str(round(t_acc,4))
-            )    
-    
-test_losses.append(running_test_loss/len(test_loader))
-test_acc.append(running_test_accuracy/len(test_loader))
-
-print(f".. "
-    f"Average Test loss: {running_test_loss/len(test_loader):.3f}.. "
-    f"Average Test accuracy: {running_test_accuracy/len(test_loader):.3f}.. ")
-
-        
+        final_pred = max(preds, key=preds.count)
+        confs = [conf for pred, conf in outputs if pred == final_pred]
+        print("predicted class:", final_pred)
+        print("confidence:", sum(confs)/len(confs))
